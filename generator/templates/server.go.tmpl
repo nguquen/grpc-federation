@@ -860,10 +860,21 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	{{- if .Proto3Optional }}
+	ret.{{ .Name }} = &{{ toLocalVariable .Name }}
+	{{- else }}
 	ret.{{ .Name }} = {{ toLocalVariable .Name }}
+	{{- end }}
+}
+{{- else }}
+{{- if .Proto3Optional }}
+{
+	__v := {{ .Value }}
+	ret.{{ .Name }} = &__v {{ .ProtoComment }}
 }
 {{- else }}
 ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -878,9 +889,17 @@ ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
 if err != nil {
 	return err
 }
+{{- if .Proto3Optional }}
+ret.{{ $name }} = &{{ toLocalVariable $name }}
+{{- else }}
 ret.{{ $name }} = {{ toLocalVariable $name }}
+{{- end }}
+{{- else }}
+{{- if .Proto3Optional }}
+ret.{{ $name }} = &{{ $v }}
 {{- else }}
 ret.{{ $name }} = {{ $v }}
+{{- end }}
 {{- end }}
 {{- end -}}
 

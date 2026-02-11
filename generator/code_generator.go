@@ -1914,6 +1914,7 @@ type SetterParam struct {
 	EnumSelector   *EnumSelectorSetterParam
 	OneofTypeName  string
 	OneofFieldName string
+	Proto3Optional bool
 }
 
 type EnumSelectorSetterParam struct {
@@ -1937,11 +1938,12 @@ type CustomResolverReturnField struct {
 }
 
 type AutoBindReturnField struct {
-	Name         string
-	Value        string
-	RequiredCast bool
-	CastFunc     string
-	ProtoComment string
+	Name           string
+	Value          string
+	RequiredCast   bool
+	CastFunc       string
+	ProtoComment   string
+	Proto3Optional bool
 }
 
 func (f *OneofReturnField) HasFieldOneofRule() bool {
@@ -2511,11 +2513,12 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		castFunc = castFuncName(fromType, field.Type)
 	}
 	return &AutoBindReturnField{
-		Name:         fieldName,
-		Value:        value,
-		RequiredCast: requiredCast,
-		CastFunc:     castFunc,
-		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
+		Name:           fieldName,
+		Value:          value,
+		RequiredCast:   requiredCast,
+		CastFunc:       castFunc,
+		ProtoComment:   fmt.Sprintf(`// { name: %q, autobind: true }`, name),
+		Proto3Optional: field.Desc != nil && field.Desc.GetProto3Optional() && field.Type != nil && field.Type.Kind != types.Message,
 	}, nil
 }
 
@@ -2571,11 +2574,12 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		}),
 		Type: typ,
 		SetterParam: &SetterParam{
-			Name:         util.ToPublicGoVariable(field.Name),
-			Value:        "v",
-			RequiredCast: requiredCast,
-			EnumSelector: enumSelectorSetterParam,
-			CastFunc:     castFuncName(fromType, toType),
+			Name:           util.ToPublicGoVariable(field.Name),
+			Value:          "v",
+			RequiredCast:   requiredCast,
+			EnumSelector:   enumSelectorSetterParam,
+			CastFunc:       castFuncName(fromType, toType),
+			Proto3Optional: field.Desc != nil && field.Desc.GetProto3Optional() && field.Type != nil && field.Type.Kind != types.Message,
 		},
 	}
 }
@@ -3569,6 +3573,7 @@ type Argument struct {
 	OneofName      string
 	OneofFieldName string
 	RequiredCast   bool
+	Proto3Optional bool
 }
 
 func (d *VariableDefinition) Arguments() []*Argument {
@@ -3584,6 +3589,7 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 	switch {
 	case expr.Call != nil:
 		isRequestArgument = true
+		msgArg = expr.Call.Request.Type
 		args = expr.Call.Request.Args
 	case expr.Message != nil:
 		msg := expr.Message.Message
@@ -3633,13 +3639,17 @@ func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*A
 	}
 
 	fromType := arg.Value.Type()
-	var toType *resolver.Type
+	var (
+		toType         *resolver.Type
+		proto3Optional bool
+	)
 	if msgArg != nil {
 		// If a message argument exists and there is a field corresponding to the argument name,
 		// the type of that field will be used as the destination type.
 		toField := msgArg.Field(arg.Name)
 		if toField != nil {
 			toType = toField.Type
+			proto3Optional = toField.Desc != nil && toField.Desc.GetProto3Optional() && toField.Type != nil && toField.Type.Kind != types.Message
 		}
 	}
 	if toType == nil {
@@ -3721,6 +3731,7 @@ func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*A
 			OneofFieldName: oneofFieldName,
 			If:             arg.If,
 			RequiredCast:   isRequiredCast,
+			Proto3Optional: proto3Optional,
 		},
 	}
 }

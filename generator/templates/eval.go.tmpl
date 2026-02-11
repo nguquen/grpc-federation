@@ -445,9 +445,17 @@ args.{{ .OneofName }} = &{{ .OneofFieldName }}{
 if err != nil {
 	return err
 }
+{{- if .Proto3Optional }}
+args.{{ .Name }} = &{{ toLocalVariable .Name }}
+{{- else }}
 args.{{ .Name }} = {{ toLocalVariable .Name }}
+{{- end }}
+{{- else }}
+{{- if .Proto3Optional }}
+args.{{ .Name }} = &{{ .Value }}
 {{- else }}
 args.{{ .Name }} = {{ .Value }}
+{{- end }}
 {{- end }}
 
 {{- end }}
