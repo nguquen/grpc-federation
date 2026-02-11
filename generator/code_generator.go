@@ -3615,7 +3615,7 @@ func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*A
 		oneofName      string
 		oneofFieldName string
 	)
-	if arg.Type != nil && arg.Type.OneofField != nil {
+	if arg.Type != nil && arg.Type.OneofField != nil && !arg.Type.OneofField.Oneof.IsSynthetic {
 		oneofName = util.ToPublicGoVariable(arg.Type.OneofField.Oneof.Name)
 		oneofFieldName = strings.TrimPrefix(file.oneofTypeToText(arg.Type.OneofField), "*")
 	}

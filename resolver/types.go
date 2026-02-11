@@ -386,9 +386,10 @@ type TypeConversionDecl struct {
 }
 
 type Oneof struct {
-	Name    string
-	Message *Message
-	Fields  []*Field
+	Name        string
+	IsSynthetic bool // true for proto3 optional synthetic oneofs
+	Message     *Message
+	Fields      []*Field
 }
 
 type Field struct {

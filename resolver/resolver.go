@@ -1282,8 +1282,19 @@ func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string, build
 		oneof.Message = msg
 		oneofs = append(oneofs, oneof)
 	}
+	// Mark synthetic oneofs created by proto3 optional fields.
+	for _, fieldDef := range msgDef.GetField() {
+		if fieldDef.GetProto3Optional() && fieldDef.OneofIndex != nil {
+			oneofs[fieldDef.GetOneofIndex()].IsSynthetic = true
+		}
+	}
 	msg.Fields = r.resolveFields(ctx, msgDef.GetField(), oneofs, builder)
-	msg.Oneofs = oneofs
+	// Only include non-synthetic oneofs (proto3 optional fields use synthetic oneofs).
+	for _, oneof := range oneofs {
+		if !oneof.IsSynthetic {
+			msg.Oneofs = append(msg.Oneofs, oneof)
+		}
+	}
 	return msg
 }
 
@@ -3458,7 +3469,7 @@ func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDe
 			fieldBuilder *source.FieldBuilder
 			oneof        *Oneof
 		)
-		if fieldDef.OneofIndex != nil {
+		if fieldDef.OneofIndex != nil && !fieldDef.GetProto3Optional() {
 			oneof = oneofs[fieldDef.GetOneofIndex()]
 			fieldBuilder = builder.WithOneof(oneof.Name).WithField(fieldDef.GetName())
 		} else {
